@@ -6,10 +6,18 @@
 
     <groupId>us.kunet</groupId>
     <artifactId>fira</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>fira</name>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub orion-tran Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/orion-tran/fira</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -51,6 +59,9 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
+
         <plugins>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>

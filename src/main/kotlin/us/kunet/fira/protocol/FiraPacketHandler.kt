@@ -10,6 +10,7 @@ abstract class FiraPacketHandler {
     val handlers: Multimap<Class<out FiraPacket>, BiConsumer<FiraConnection, FiraPacket>> = ArrayListMultimap.create()
 
     fun <T : FiraPacket> addHandler(packetClass: Class<T>, callback: BiConsumer<FiraConnection, T>) {
+        @Suppress("UNCHECKED_CAST")
         handlers.put(packetClass, callback as BiConsumer<FiraConnection, FiraPacket>)
     }
 
