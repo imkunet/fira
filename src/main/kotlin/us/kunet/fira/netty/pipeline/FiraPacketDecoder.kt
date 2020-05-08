@@ -37,7 +37,7 @@ class FiraPacketDecoder(private val registry: FiraPacketRegistry, private val ha
         val connection = ctx?.pipeline()?.get(FiraChannelHandler::class.java)?.connection ?: return
         if (!ctx.channel().isOpen || input == null) return
 
-        logger.debug("raw packet data: ${input.array().toList().toString()}")
+        //logger.debug("raw packet data: ${input.array().toList().toString()}")
 
         val packetId = input.readVarInt()
         logger.debug(
