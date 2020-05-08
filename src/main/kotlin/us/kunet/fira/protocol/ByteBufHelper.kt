@@ -6,32 +6,26 @@ import java.nio.charset.StandardCharsets
 import kotlin.experimental.and
 import kotlin.experimental.or
 
-@Throws(IOException::class)
+@Throws(IllegalArgumentException::class)
 fun ByteBuf.readVarInt(): Int {
-    var out = 0
-    var bytes = 0
-    var read: Byte
-    do {
-        read = this.readByte()
-        out = out or ((read and 0x7F).toInt() shl bytes++ * 7)
-        if (bytes > 5) {
-            throw IOException("Attempt to read int bigger than allowed for a varint!")
-        }
-    } while ((read and 0x80.toByte()).toInt() == 0x80)
-    return out
+    var value = 0
+    var i = 0
+    var b: Int
+    while (this.readByte().also { b = it.toInt() } and 0x80.toByte() != 0.toByte()) {
+        value = value or (b and 0x7F shl i)
+        i += 7
+        require(i <= 35) { "Variable length quantity is too long" }
+    }
+    return value or (b shl i)
 }
 
 fun ByteBuf.writeVarInt(write: Int) {
     var value = write
-    var part: Byte
-    do {
-        part = (value and 0x7F).toByte()
+    while ((value and -0x80).toLong() != 0L) {
+        this.writeByte(value and 0x7F or 0x80)
         value = value ushr 7
-        if (value != 0) {
-            part = part or 0x80.toByte()
-        }
-        this.writeByte(part.toInt())
-    } while (value != 0)
+    }
+    this.writeByte(value and 0x7F)
 }
 
 @Throws(IOException::class)

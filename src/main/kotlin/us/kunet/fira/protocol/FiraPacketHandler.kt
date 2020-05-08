@@ -7,7 +7,8 @@ import java.util.function.BiConsumer
 
 abstract class FiraPacketHandler {
     abstract val packetDirection: PacketDirection
-    val handlers: Multimap<Class<out FiraPacket>, BiConsumer<FiraConnection, FiraPacket>> = ArrayListMultimap.create()
+    private val handlers: Multimap<Class<out FiraPacket>, BiConsumer<FiraConnection, FiraPacket>> =
+        ArrayListMultimap.create()
 
     fun <T : FiraPacket> addHandler(packetClass: Class<T>, callback: BiConsumer<FiraConnection, T>) {
         @Suppress("UNCHECKED_CAST")

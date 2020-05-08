@@ -1,6 +1,7 @@
 package us.kunet.fira.instance
 
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelOption
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import us.kunet.fira.netty.pipeline.FiraPipeline
@@ -10,7 +11,8 @@ import kotlin.concurrent.thread
 
 class FiraServer(
     private val pipeline: FiraPipeline,
-    private val address: SocketAddress = InetSocketAddress(25565)
+    private val address: SocketAddress = InetSocketAddress(25565),
+    private val backlog: Int = 128
 ) {
 
     fun start() {
@@ -22,6 +24,8 @@ class FiraServer(
                 val bootstrap = ServerBootstrap()
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel::class.java)
+                    .option(ChannelOption.SO_BACKLOG, backlog)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childHandler(pipeline)
 
                 bootstrap.bind(address).sync().channel().closeFuture().sync()
