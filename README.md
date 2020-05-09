@@ -1,16 +1,19 @@
-# fira
+# fira (n.) /fi.ɾa/
 
 [![Discord](https://img.shields.io/discord/701531356609511555.svg?logo=discord&label=)](https://discord.gg/qtCKz4X)
-#### proudly written in [Kotlin](https://kotl.in/)
+[![Kotlin](https://img.shields.io/badge/Written%20with-Kotlin-brightgreen)](https://kotl.in/)
+
+fira is a Kotlin library that allows you to work with minecraft packets
+in an organized and object oriented way
 
 ## byol
 Bring your own logic! This was meant for a few small projects
 that involve diving into the logic of minecraft packets so using netty
 it's going to now be easy to implement your own logic for whatever purposes
-you have in mind.
+you have in mind
 
 With fira you could build minecraft bots or fake servers- nothing's really off
-limits.
+limits
 
 ## how to use
 There are examples in the test folder, if you need help with fira or just 
