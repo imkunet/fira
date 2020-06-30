@@ -17,6 +17,14 @@
             <name>GitHub orion-tran Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/orion-tran/fira</url>
         </repository>
+        <repository>
+            <id>kunet</id>
+            <url>https://repo.kingtux.me/storages/maven/kunet</url>
+        </repository>
+        <snapshotRepository>
+            <id>kunet</id>
+            <url>https://repo.kingtux.me/storages/maven/kunet</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <properties>
