@@ -4,34 +4,28 @@ import us.kunet.fira.instance.FiraServer
 import us.kunet.fira.netty.pipeline.FiraPipeline
 import us.kunet.fira.protocol.FiraServerHandler
 import us.kunet.fira.protocol.ProtocolState
-import java.util.function.BiConsumer
+import us.kunet.fira.protocol.addHandler
+import java.util.*
 
 fun main() {
     val registry = createPacketRegistry()
-    val handler = FiraServerHandler()
+    val handlers = FiraServerHandler()
 
-    handler.addHandler(Handshake::class.java, BiConsumer { t, u ->
-        when (u.nextState) {
-            1 -> {
-                t.state = ProtocolState.STATUS
-            }
-            2 -> {
-                t.state = ProtocolState.LOGIN
-                // don't do anything but kick them, we didn't implement actual login logic
-                val kick = Disconnect()
-                kick.message = """{"text":"This isn't a real server, dummy!"}"""
-                t.sendPacket(kick)
-                t.close()
-            }
-            else -> {
-                throw IllegalArgumentException("Invalid client handshake intention")
-            }
-        }
-    })
+    handlers.addHandler<ClientHandshakePacket> { connection, packet ->
+        connection.state = packet.nextState
+    }
 
-    handler.addHandler(StatusRequest::class.java, BiConsumer { t, _ ->
-        val response = Status()
-        response.response = """
+    handlers.addHandler<ClientLoginStartPacket> { connection, packet ->
+        // this skips authentication (server emulates offline mode)
+        val loginSuccessPacket = ServerLoginSuccessPacket(UUID.randomUUID(), packet.name)
+        connection.sendPacket(loginSuccessPacket)
+        connection.state = ProtocolState.PLAY
+    }
+
+    handlers.addHandler<ClientRequestPacket> { connection, _ ->
+        connection.sendPacket(
+            ServerResponsePacket(
+                """
             {
                 "version": {
                     "name": "fira (test)",
@@ -46,17 +40,16 @@ fun main() {
                     "text": "Hello fira!"
                 }
             }
-        """.trimIndent()
-        t.sendPacket(response)
-    })
+            """.trimIndent()
+            )
+        )
+    }
 
-    handler.addHandler(Ping::class.java, BiConsumer { t, u ->
-        val pong = Pong()
-        pong.time = u.time
-        t.sendPacket(pong)
-    })
+    handlers.addHandler<ClientPingPacket> { connection, packet ->
+        connection.sendPacket(ServerPongPacket(packet.payload))
+    }
 
-    val server = FiraServer(FiraPipeline(registry, handler))
+    val server = FiraServer(FiraPipeline(registry, handlers))
 
     server.start()
 }

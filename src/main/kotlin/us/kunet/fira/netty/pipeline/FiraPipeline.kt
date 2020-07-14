@@ -7,14 +7,15 @@ import us.kunet.fira.netty.FiraChannelHandler
 import us.kunet.fira.netty.FiraConnection
 import us.kunet.fira.protocol.FiraPacketHandler
 import us.kunet.fira.protocol.FiraPacketRegistry
-import java.util.function.Consumer
 
-class FiraPipeline(private val registry: FiraPacketRegistry, private val handler: FiraPacketHandler,
-                   private val pipelineCallback: Consumer<ChannelPipeline>? = null,
-                   private val connectCallback: Consumer<FiraConnection>? = null): ChannelInitializer<SocketChannel>() {
+class FiraPipeline(
+    private val registry: FiraPacketRegistry, private val handler: FiraPacketHandler,
+    private val pipelineCallback: ((ChannelPipeline) -> Unit)? = null,
+    private val connectCallback: ((FiraConnection) -> Unit)? = null
+) : ChannelInitializer<SocketChannel>() {
 
-    override fun initChannel(socketChannel: SocketChannel?) {
-        val pipeline: ChannelPipeline = socketChannel?.pipeline() ?: return
+    override fun initChannel(socketChannel: SocketChannel) {
+        val pipeline: ChannelPipeline = socketChannel.pipeline()
 
         pipeline.addLast("lengthDecoder", FiraPacketLengthDecoder())
         pipeline.addLast("decoder", FiraPacketDecoder(registry, handler))
@@ -24,6 +25,6 @@ class FiraPipeline(private val registry: FiraPacketRegistry, private val handler
 
         pipeline.addLast("handler", FiraChannelHandler(connectCallback))
 
-        pipelineCallback?.accept(pipeline)
+        pipelineCallback?.invoke(pipeline)
     }
 }

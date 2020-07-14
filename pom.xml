@@ -6,13 +6,12 @@
 
     <groupId>us.kunet</groupId>
     <artifactId>fira</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>2.0</version>
     <packaging>jar</packaging>
 
     <name>fira</name>
 
     <distributionManagement>
-
         <repository>
             <id>kunet</id>
             <url>https://repo.kingtux.me/storages/maven/kunet</url>
@@ -59,6 +58,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-reflect</artifactId>
+            <version>${kotlin.version}</version>
         </dependency>
     </dependencies>
 

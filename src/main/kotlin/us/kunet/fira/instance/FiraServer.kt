@@ -9,17 +9,16 @@ import java.net.InetSocketAddress
 import java.net.SocketAddress
 import kotlin.concurrent.thread
 
-class FiraServer(
+open class FiraServer(
     private val pipeline: FiraPipeline,
     private val address: SocketAddress = InetSocketAddress(25565),
-    private val backlog: Int = 128
-) {
+    private val backlog: Int = 128,
 
+    private val bossGroup: NioEventLoopGroup = NioEventLoopGroup(),
+    private val workerGroup: NioEventLoopGroup = NioEventLoopGroup()
+) {
     fun start() {
         thread {
-            val bossGroup = NioEventLoopGroup()
-            val workerGroup = NioEventLoopGroup()
-
             try {
                 val bootstrap = ServerBootstrap()
                     .group(bossGroup, workerGroup)
@@ -28,6 +27,7 @@ class FiraServer(
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childHandler(pipeline)
 
+                bootstrap.option(ChannelOption.TCP_NODELAY, true)
                 bootstrap.bind(address).sync().channel().closeFuture().sync()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -36,5 +36,10 @@ class FiraServer(
                 workerGroup.shutdownGracefully()
             }
         }
+    }
+
+    fun stop() {
+        bossGroup.shutdownGracefully()
+        workerGroup.shutdownGracefully()
     }
 }

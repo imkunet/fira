@@ -8,16 +8,17 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import us.kunet.fira.protocol.FiraPacket
 import us.kunet.fira.protocol.FiraPacketRegistry
 import us.kunet.fira.protocol.writeVarInt
+import kotlin.reflect.full.companionObjectInstance
 
 class FiraPacketLengthEncoder : MessageToByteEncoder<ByteBuf>() {
     companion object {
         val logger: InternalLogger = Slf4JLoggerFactory.getInstance(FiraPacketLengthEncoder::class.java)
     }
 
-    override fun encode(ctx: ChannelHandlerContext?, msg: ByteBuf?, out: ByteBuf?) {
-        msg?.readableBytes()?.let { out?.writeVarInt(it) }
-        logger.debug("Encoded packet length (${msg?.readableBytes()})")
-        out?.writeBytes(msg)
+    override fun encode(ctx: ChannelHandlerContext, msg: ByteBuf, out: ByteBuf) {
+        msg.readableBytes().let { out.writeVarInt(it) }
+        logger.debug("Encoded packet length (${msg.readableBytes()})")
+        out.writeBytes(msg)
     }
 }
 
@@ -26,13 +27,18 @@ class FiraPacketEncoder(private val registry: FiraPacketRegistry) : MessageToByt
         val logger: InternalLogger = Slf4JLoggerFactory.getInstance(FiraPacketEncoder::class.java)
     }
 
-    override fun encode(ctx: ChannelHandlerContext?, packet: FiraPacket?, out: ByteBuf?) {
-        if (packet == null || out == null) return
+    override fun encode(ctx: ChannelHandlerContext, packet: FiraPacket, out: ByteBuf) {
+        @Suppress("UNCHECKED_CAST")
+        (packet::class.companionObjectInstance as FiraPacket.Companion<FiraPacket>).also { companion ->
+            registry.fillInfo(packet)
+            logger.debug("Encoded packet State: ${companion.state} ID: ${companion.id} Data: $packet")
 
-        registry.fillInfo(packet)
-        logger.debug("Encoded packet State: ${packet.state} ID: ${packet.id} Data: $packet")
+            out.writeVarInt(companion.id)
 
-        out.writeVarInt(packet.id)
-        packet.toWire(out)
+            @Suppress("UNCHECKED_CAST")
+            companion.run {
+                packet.toWire(out)
+            }
+        }
     }
 }

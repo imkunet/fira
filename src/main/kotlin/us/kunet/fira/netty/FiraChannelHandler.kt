@@ -5,9 +5,8 @@ import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.util.internal.logging.InternalLogger
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import us.kunet.fira.protocol.FiraPacket
-import java.util.function.Consumer
 
-class FiraChannelHandler(private val connectCallback: Consumer<FiraConnection>?):
+class FiraChannelHandler(private val connectCallback: ((FiraConnection) -> Unit)?) :
     SimpleChannelInboundHandler<FiraPacket>() {
 
     companion object {
@@ -16,25 +15,25 @@ class FiraChannelHandler(private val connectCallback: Consumer<FiraConnection>?)
 
     var connection: FiraConnection? = null
 
-    override fun channelActive(ctx: ChannelHandlerContext?) {
-        connection = FiraConnection(ctx!!)
-        connectCallback?.accept(connection!!)
+    override fun channelActive(ctx: ChannelHandlerContext) {
+        connection = FiraConnection(ctx)
+        connectCallback?.invoke(connection!!)
     }
 
-    override fun channelInactive(ctx: ChannelHandlerContext?) {
+    override fun channelInactive(ctx: ChannelHandlerContext) {
         logger.debug("Dropping inactive connection ${connection?.remoteAddress()}")
         connection = null
-        ctx?.channel()?.close()
-        ctx?.close()
+        ctx.channel()?.close()
+        ctx.close()
     }
 
-    override fun exceptionCaught(ctx: ChannelHandlerContext?, cause: Throwable?) {
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
         connection = null
-        ctx?.close()
-        cause?.printStackTrace()
+        ctx.close()
+        cause.printStackTrace()
     }
 
-    override fun channelRead0(ctx: ChannelHandlerContext?, msg: FiraPacket?) {
+    override fun channelRead0(ctx: ChannelHandlerContext, msg: FiraPacket) {
         logger.debug("Handled packet: $msg")
     }
 }

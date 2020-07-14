@@ -1,131 +1,183 @@
 package examples
 
-import com.google.common.base.MoreObjects
 import io.netty.buffer.ByteBuf
 import us.kunet.fira.protocol.*
+import java.util.*
 
-fun createPacketRegistry(): FiraPacketRegistry {
-    val registry = FiraPacketRegistry()
+fun createPacketRegistry() = FiraPacketRegistry().apply {
+    register<ClientHandshakePacket>()
 
-    registry.register(PacketDirection.FROM_CLIENT, ProtocolState.HANDSHAKE, 0x00, Handshake::class.java)
+    register<ClientRequestPacket>()
+    register<ClientPingPacket>()
 
-    registry.register(PacketDirection.FROM_CLIENT, ProtocolState.STATUS, 0x00, StatusRequest::class.java)
-    registry.register(PacketDirection.FROM_CLIENT, ProtocolState.STATUS, 0x01, Ping::class.java)
+    register<ServerResponsePacket>()
+    register<ServerPongPacket>()
 
-    registry.register(PacketDirection.FROM_SERVER, ProtocolState.STATUS, 0x00, Status::class.java)
-    registry.register(PacketDirection.FROM_SERVER, ProtocolState.STATUS, 0x01, Pong::class.java)
+    register<ClientLoginStartPacket>()
 
-    registry.register(PacketDirection.FROM_SERVER, ProtocolState.LOGIN, 0x00, Disconnect::class.java)
-
-    return registry
+    register<ServerDisconnectPacket>()
+    register<ServerLoginSuccessPacket>()
 }
 
-class Handshake: FiraPacket() {
-    var version: Int = -1
-    var address: String = ""
-    var port: Int = 0
-    var nextState: Int = 0
+class ClientHandshakePacket(
+        val protocolVersion: Int,
+        val serverAddress: String,
+        val serverPort: Int,
+        val nextState: ProtocolState
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ClientHandshakePacket>(
+            0x00,
+            ProtocolState.HANDSHAKE,
+            PacketDirection.FROM_CLIENT
+    ) {
+        override fun fromWire(buf: ByteBuf): ClientHandshakePacket {
+            return ClientHandshakePacket(
+                    buf.readVarInt(),
+                    buf.readUTF8(),
+                    buf.readUnsignedShort(),
+                    ProtocolState.fromId(buf.readVarInt())
+            )
+        }
 
-    override fun toWire(buf: ByteBuf) {
-        buf.writeVarInt(version)
-        buf.writeUTF8(address)
-        buf.writeShort(port)
-        buf.writeVarInt(nextState)
-    }
-
-    override fun fromWire(buf: ByteBuf) {
-        version = buf.readVarInt()
-        address = buf.readUTF8()
-        port = buf.readUnsignedShort()
-        nextState = buf.readVarInt()
-    }
-
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this)
-            .add("version", version)
-            .add("address", address)
-            .add("port", port)
-            .add("nextState", nextState)
-            .toString()
-    }
-}
-
-class StatusRequest: FiraPacket() {
-    override fun toWire(buf: ByteBuf) {}
-
-    override fun fromWire(buf: ByteBuf) {}
-
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this).toString()
+        override fun ClientHandshakePacket.toWire(buf: ByteBuf) {
+            buf.writeVarInt(protocolVersion)
+            buf.writeUTF8(serverAddress)
+            buf.writeShort(serverPort)
+            buf.writeVarInt(nextState.ordinal)
+        }
     }
 }
 
-class Status: FiraPacket() {
-    var response: String = ""
+class ClientRequestPacket : FiraPacket {
+    companion object : FiraPacket.Companion<ClientRequestPacket>(
+            0x00,
+            ProtocolState.STATUS,
+            PacketDirection.FROM_CLIENT
+    ) {
+        override fun fromWire(buf: ByteBuf): ClientRequestPacket {
+            return ClientRequestPacket()
+        }
 
-    override fun toWire(buf: ByteBuf) {
-        buf.writeUTF8(response)
-    }
-
-    override fun fromWire(buf: ByteBuf) {
-        response = buf.readUTF8()
-    }
-
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this)
-            .add("response", response)
-            .toString()
+        override fun ClientRequestPacket.toWire(buf: ByteBuf) {}
     }
 }
 
-class Ping: FiraPacket() {
-    var time: Long = 0L
+class ClientPingPacket(
+        val payload: Long
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ClientPingPacket>(
+            0x01,
+            ProtocolState.STATUS,
+            PacketDirection.FROM_CLIENT
+    ) {
+        override fun fromWire(buf: ByteBuf): ClientPingPacket {
+            return ClientPingPacket(
+                    buf.readLong()
+            )
+        }
 
-    override fun toWire(buf: ByteBuf) {}
-
-    override fun fromWire(buf: ByteBuf) {
-        time = buf.readLong()
-    }
-
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this)
-            .add("time", time)
-            .toString()
-    }
-
-}
-
-class Pong: FiraPacket() {
-    var time: Long = 0L
-
-    override fun toWire(buf: ByteBuf) {
-        buf.writeLong(time)
-    }
-
-    override fun fromWire(buf: ByteBuf) {}
-
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this)
-            .add("time", time)
-            .toString()
+        override fun ClientPingPacket.toWire(buf: ByteBuf) {
+            buf.writeLong(payload)
+        }
     }
 }
 
-class Disconnect: FiraPacket() {
-    var message: String = ""
+class ServerResponsePacket(
+        val jsonResponse: String
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ServerResponsePacket>(
+            0x00,
+            ProtocolState.STATUS,
+            PacketDirection.FROM_SERVER
+    ) {
+        override fun fromWire(buf: ByteBuf): ServerResponsePacket {
+            val readUTF8 = buf.readUTF8()
+            return ServerResponsePacket(readUTF8)
+        }
 
-    override fun toWire(buf: ByteBuf) {
-        buf.writeUTF8(message)
+        override fun ServerResponsePacket.toWire(buf: ByteBuf) {
+            buf.writeUTF8(jsonResponse)
+        }
     }
+}
 
-    override fun fromWire(buf: ByteBuf) {
-        message = buf.readUTF8()
+class ServerPongPacket(
+        val payload: Long
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ServerPongPacket>(
+            0x01,
+            ProtocolState.STATUS,
+            PacketDirection.FROM_SERVER
+    ) {
+        override fun fromWire(buf: ByteBuf): ServerPongPacket {
+            return ServerPongPacket(
+                    buf.readLong()
+            )
+        }
+
+        override fun ServerPongPacket.toWire(buf: ByteBuf) {
+            buf.writeLong(payload)
+        }
     }
+}
 
-    override fun toString(): String {
-        return MoreObjects.toStringHelper(this)
-            .add("message", message)
-            .toString()
+class ClientLoginStartPacket(
+        val name: String
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ClientLoginStartPacket>(
+            0x00,
+            ProtocolState.LOGIN,
+            PacketDirection.FROM_CLIENT
+    ) {
+        override fun fromWire(buf: ByteBuf): ClientLoginStartPacket {
+            return ClientLoginStartPacket(
+                    buf.readUTF8()
+            )
+        }
+
+        override fun ClientLoginStartPacket.toWire(buf: ByteBuf) {
+            buf.writeUTF8(name)
+        }
     }
+}
 
+class ServerDisconnectPacket(
+        val reason: String
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ServerDisconnectPacket>(
+            0x00,
+            ProtocolState.LOGIN,
+            PacketDirection.FROM_SERVER
+    ) {
+        override fun fromWire(buf: ByteBuf): ServerDisconnectPacket {
+            return ServerDisconnectPacket(buf.readUTF8())
+        }
+
+        override fun ServerDisconnectPacket.toWire(buf: ByteBuf) {
+            buf.writeUTF8(reason)
+        }
+    }
+}
+
+class ServerLoginSuccessPacket(
+        val uuid: UUID,
+        val username: String
+) : FiraPacket {
+    companion object : FiraPacket.Companion<ServerLoginSuccessPacket>(
+            0x02,
+            ProtocolState.LOGIN,
+            PacketDirection.FROM_SERVER
+    ) {
+        override fun fromWire(buf: ByteBuf): ServerLoginSuccessPacket {
+            return ServerLoginSuccessPacket(
+                    UUID.fromString(buf.readUTF8()),
+                    buf.readUTF8()
+            )
+        }
+
+        override fun ServerLoginSuccessPacket.toWire(buf: ByteBuf) {
+            buf.writeUTF8(uuid.toString())
+            buf.writeUTF8(username)
+        }
+    }
 }
